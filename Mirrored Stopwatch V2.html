@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mirror Counter / Stopwatch</title>
+
+<style>
+    body {
+        margin: 0;
+        background: black;
+        color: #00ff66;
+        font-family: monospace;
+        height: 100vh;
+        overflow: hidden;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .container {
+        transform: scaleX(-1);
+        transition: transform 0.4s ease;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        width: 100vw;
+        height: 100vh;
+    }
+
+    .container.normal {
+        transform: scaleX(1);
+    }
+
+    /* HUGE responsive display */
+    .display {
+        font-weight: 900;
+        letter-spacing: 0.02em; /* tighter spacing */
+        color: #00ff66;
+        text-align: center;
+        white-space: nowrap;
+        max-width: 95vw;
+        max-height: 90vh;
+        font-size: clamp(12vw, 15vh, 18vw); /* default responsive */
+        transition: font-size 0.2s ease, margin-top 0.2s ease;
+    }
+
+    /* Large responsive buttons */
+    .buttons {
+        display: flex;
+        gap: 3vw;
+        transition: margin 0.2s ease;
+    }
+
+    button {
+        font-size: clamp(1rem, 3vw, 2rem);
+        padding: clamp(10px, 2vh, 25px) clamp(20px, 4vw, 50px);
+        border: none;
+        cursor: pointer;
+        background: #00ff66;
+        color: white;
+        font-weight: bold;
+
+        /* Standard shadow for buttons */
+        text-shadow:
+            0 0 4px rgba(0,0,0,0.9),
+            0 0 8px rgba(0,0,0,0.8),
+            0 0 12px rgba(0,0,0,0.6);
+
+        box-shadow: 0 0 20px rgba(0,255,102,0.3);
+    }
+
+    button:hover {
+        background: #33ff85;
+    }
+
+    /* Top-right controls (never flipped) */
+    .top-controls {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        display: flex;
+        gap: 10px;
+        z-index: 1000;
+    }
+
+    .circle-btn {
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        padding: 0;
+        background: #00ff66;
+    }
+
+    /* Timer button blue box */
+    .mode-box {
+        position: relative;
+        top: 0.4px;
+        left: 0.1px;
+        width: 50%;   
+        height: 50%;  
+        background: #007bff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+
+        color: white;
+        font-weight: bold;
+        font-size: 70%;
+        text-align: center;
+
+        border: 2px solid black; /* hard outline */
+
+        /* Soft shadow inside box */
+        box-shadow:
+            0 0 4px rgba(0,0,0,0.7),
+            0 0 8px rgba(0,0,0,0.4);
+
+        /* Soft shadow for text */
+        text-shadow:
+            0 0 3px rgba(0,0,0,0.8),
+            0 0 6px rgba(0,0,0,0.6);
+    }
+
+    /* Flip button special styling */
+    .flip-btn {
+        font-size: 28px;
+        text-shadow:
+            0 0 2px rgba(0,0,0,0.9),
+            0 0 4px rgba(0,0,0,0.8),
+            0 0 6px rgba(0,0,0,0.6);
+
+        /* Soft shadow on green circle */
+        box-shadow:
+            0 0 4px rgba(0,0,0,0.7),
+            0 0 8px rgba(0,0,0,0.4);
+
+        position: relative;
+        top: -2px; /* push icon up slightly */
+    }
+
+    .flip-icon{
+        position: relative;
+        top: -0.4px;
+        left: 0.1px;
+    }
+</style>
+</head>
+<body>
+
+<div class="top-controls">
+    <button class="circle-btn" onclick="toggleMode()">
+        <span class="mode-box">#</span>
+    </button>
+
+    <button class="circle-btn flip-btn">
+        <span class="flip-icon">🔄</span>
+    </button>
+</div>
+
+<div class="container" id="container">
+    <div class="display" id="display">1</div>
+
+    <div class="buttons">
+        <button onclick="start()">Start</button>
+        <button onclick="stop()">Stop</button>
+        <button onclick="reset()">Reset</button>
+    </div>
+</div>
+
+<script>
+let startTime = 0;
+let elapsedTime = 0;
+let timerInterval = null;
+let mode = "counter";
+let counterValue = 1;
+
+function timeToString(time) {
+    let hrs = Math.floor(time / 3600000);
+    let mins = Math.floor((time % 3600000) / 60000);
+    let secs = Math.floor((time % 60000) / 1000);
+
+    return (
+        (hrs < 10 ? "0" + hrs : hrs) + ":" +
+        (mins < 10 ? "0" + mins : mins) + ":" +
+        (secs < 10 ? "0" + secs : secs)
+    );
+}
+
+function print(txt) {
+    document.getElementById("display").innerHTML = txt;
+}
+
+function adjustFontSize() {
+    const display = document.getElementById("display");
+    const topControls = document.querySelector(".top-controls");
+    const buttons = document.querySelector(".buttons");
+
+    const topControlsHeight = topControls.offsetHeight;
+    const buttonsHeight = buttons.offsetHeight;
+    const padding = 30; // spacing around display
+
+    if(mode === "counter") {
+        let availableHeight = window.innerHeight - topControlsHeight - buttonsHeight - padding;
+        // limit max size to prevent overlapping
+        let fontSize = Math.min(availableHeight, window.innerHeight * 0.65);
+        display.style.fontSize = fontSize + "px";
+    } else {
+        display.style.fontSize = "clamp(12vw, 15vh, 18vw)";
+    }
+}
+
+function adjustLayout() {
+    const display = document.getElementById("display");
+    const buttons = document.querySelector(".buttons");
+
+    if (mode === "counter") {
+        display.style.marginTop = "-7vh";  // push number slightly down
+        buttons.style.marginTop = "-5vh";  // move buttons up
+        buttons.style.marginBottom = "4vh";
+    } else {
+        display.style.marginTop = "0"; 
+        buttons.style.marginTop = "5vh";
+        buttons.style.marginBottom = "5vh";
+    }
+}
+
+function start() {
+    if (timerInterval) return;
+
+    if (mode === "stopwatch") {
+        startTime = Date.now() - elapsedTime;
+        timerInterval = setInterval(function() {
+            elapsedTime = Date.now() - startTime;
+            print(timeToString(elapsedTime));
+        }, 1000);
+    } else {
+        timerInterval = setInterval(function() {
+            print(counterValue);
+            counterValue++;
+            if (counterValue > 4) counterValue = 1;
+        }, 1000);
+    }
+    adjustFontSize();
+    adjustLayout();
+}
+
+function stop() {
+    clearInterval(timerInterval);
+    timerInterval = null;
+}
+
+function reset() {
+    stop();
+
+    if (mode === "stopwatch") {
+        elapsedTime = 0;
+        print("00:00:00");
+    } else {
+        counterValue = 1;
+        print("1");
+    }
+    adjustFontSize();
+    adjustLayout();
+}
+
+function toggleFlip() {
+    const container = document.getElementById("container");
+    container.classList.toggle("normal");
+}
+
+function toggleMode() {
+    stop();
+
+    if (mode === "stopwatch") {
+        mode = "counter";
+        counterValue = 1;
+        print("1");
+    } else {
+        mode = "stopwatch";
+        elapsedTime = 0;
+        print("00:00:00");
+    }
+    adjustFontSize();
+    adjustLayout();
+}
+
+window.addEventListener("resize", () => {
+    adjustFontSize();
+    adjustLayout();
+});
+
+window.addEventListener("load", () => {
+    adjustFontSize();
+    adjustLayout();
+});
+</script>
+
+</body>
+</html>
