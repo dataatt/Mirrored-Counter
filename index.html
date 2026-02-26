@@ -64,9 +64,9 @@
 
         /* Standard shadow for buttons */
         text-shadow:
-            0 0 4px rgba(0,0,0,0.9),
-            0 0 8px rgba(0,0,0,0.8),
-            0 0 12px rgba(0,0,0,0.6);
+            0 0 4px rgba(0,0,0,1),
+            0 0 8px rgba(0,0,0,1),
+            0 0 12px rgba(0,0,0,1);
 
         box-shadow: 0 0 20px rgba(0,255,102,0.3);
     }
@@ -111,7 +111,7 @@
 
         color: white;
         font-weight: bold;
-        font-size: 70%;
+        font-size: 22px;   /* adjust to taste */
         text-align: center;
 
         border: 2px solid black; /* hard outline */
@@ -158,7 +158,7 @@
         <span class="mode-box">#</span>
     </button>
 
-    <button class="circle-btn flip-btn">
+    <button class="circle-btn flip-btn" onclick="toggleFlip()">
         <span class="flip-icon">🔄</span>
     </button>
 </div>
@@ -235,17 +235,28 @@ function start() {
 
     if (mode === "stopwatch") {
         startTime = Date.now() - elapsedTime;
+
+        // Immediate stopwatch update (keep this how you like it)
+        elapsedTime = Date.now() - startTime;
+        print(timeToString(elapsedTime));
+
         timerInterval = setInterval(function() {
             elapsedTime = Date.now() - startTime;
             print(timeToString(elapsedTime));
         }, 1000);
+
     } else {
-        timerInterval = setInterval(function() {
-            print(counterValue);
+
+        function updateCounter() {
             counterValue++;
             if (counterValue > 4) counterValue = 1;
-        }, 1000);
+            print(counterValue);
+        }
+
+        // Wait 1 second before first change
+        timerInterval = setInterval(updateCounter, 1000);
     }
+
     adjustFontSize();
     adjustLayout();
 }
