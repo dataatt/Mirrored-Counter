@@ -310,8 +310,7 @@ function stop() {
 }
 
 function reset() {
-    clearInterval(timerInterval);
-    timerInterval = null;
+    stop();
 
     if (mode === "stopwatch") {
         elapsedTime = 0;
