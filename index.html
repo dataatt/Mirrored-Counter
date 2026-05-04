@@ -173,12 +173,52 @@
     </div>
 </div>
 
+<audio id="keepAwakeAudio" loop playsinline>
+    <source src="silent.mp3" type="audio/mpeg">
+</audio>
+
 <script>
 let startTime = 0;
 let elapsedTime = 0;
 let timerInterval = null;
 let mode = "counter";
 let counterValue = 1;
+
+let wakeLock = null;
+let keepAwakeStarted = false;
+
+async function enableKeepAwake() {
+    if (keepAwakeStarted) return;
+
+    keepAwakeStarted = true;
+
+    // Wake Lock
+    if ('wakeLock' in navigator) {
+        try {
+            wakeLock = await navigator.wakeLock.request('screen');
+        } catch {}
+    }
+
+    // Audio fallback
+    const audio = document.getElementById("keepAwakeAudio");
+    audio.volume = 0.01;
+    audio.play().catch(() => {});
+}
+
+function disableKeepAwake() {
+    keepAwakeStarted = false;
+
+    // Stop audio
+    const audio = document.getElementById("keepAwakeAudio");
+    audio.pause();
+    audio.currentTime = 0;
+
+    // Release wake lock
+    if (wakeLock) {
+        wakeLock.release();
+        wakeLock = null;
+    }
+}
 
 function timeToString(time) {
     let hrs = Math.floor(time / 3600000);
@@ -231,6 +271,7 @@ function adjustLayout() {
 }
 
 function start() {
+    enableKeepAwake(); // <-- ADD THIS LINE
     if (timerInterval) return;
 
     if (mode === "stopwatch") {
@@ -264,10 +305,13 @@ function start() {
 function stop() {
     clearInterval(timerInterval);
     timerInterval = null;
+
+    disableKeepAwake();
 }
 
 function reset() {
-    stop();
+    clearInterval(timerInterval);
+    timerInterval = null;
 
     if (mode === "stopwatch") {
         elapsedTime = 0;
